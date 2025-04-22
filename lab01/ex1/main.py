@@ -1,9 +1,9 @@
 import sys
 
-def calculate_average_score(scores_list):
+def calculate_total_score(scores_list):
     """
     Calculate the average score by ignoring the max and min values
-    and averaging the remaining three scores.
+    and summing the remaining three scores.
     """
     if len(scores_list) != 5:
         raise ValueError("Scores list must contain exactly 5 scores.")
@@ -20,8 +20,7 @@ def calculate_average_score(scores_list):
         sum += score
     # Remove the min and max from the sum
     sum -= min + max
-    average_score =  sum/ 3  # Average the middle three scores
-    return average_score
+    return sum
 
 def read_file(filename):
     scores = []
@@ -71,6 +70,7 @@ def read_file(filename):
     return scores
 
 def main():
+
     # Check if the file name is provided as a command-line argument
     if len(sys.argv) < 2:
         print("Usage: python main.py <filename>")
@@ -79,36 +79,38 @@ def main():
     # Get the file name from the command-line arguments
     filename = sys.argv[1]
     players = read_file(filename)
-    # Print the top three players
-    print("Final Ranking:")
     for player in players:
-        player['average_score'] = calculate_average_score(player['scores'])
+        player['total_score'] = calculate_total_score(player['scores'])
     
 
-        # Sort players by average score in descending order
-        players.sort(key=lambda x: x['average_score'], reverse=True)
-        for i in range(3):
-            if i < len(players):
-                player = players[i]
-                # Print the player's name, surname, and average score
-                print(f"{i + 1}: {player['name']} {player['surname']} - Score: {player['average_score']:.2f}")
-            else:
-                break
+    # Sort players by total score in descending order
+    players.sort(key=lambda x: x['total_score'], reverse=True)
+
+
+    # Print the top three players
+    print("Final Ranking:")
+    for i in range(3):
+        if i < len(players):
+            player = players[i]
+            # Print the player's name, surname, and total score
+            print(f"{i + 1}: {player['name']} {player['surname']} - Score: {player['total_score']:.1f}")
+        else:
+            break
         
-        # Group scores by country and calculate total scores
-        country_scores = {}
-        max_country_score = 0
-        max_country_name = ""
-        for player in players:
-            country = player["country_code"]
-            country_scores[country] = country_scores.get(country, 0) + player["average_score"]
-            if country_scores[country] > max_country_score:
-                max_country_score = country_scores[country]
-                max_country_name = country
-        
-        # Find the country with the highest total score
-        print("\nBest Country:")
-        print(f"{max_country_name} - Total score: {max_country_score:.2f}")
+    # Group scores by country and calculate total scores
+    country_scores = {}
+    max_country_score = 0
+    max_country_name = ""
+    for player in players:
+        country = player["country_code"]
+        country_scores[country] = country_scores.get(country, 0) + player["total_score"]
+        if country_scores[country] > max_country_score:
+            max_country_score = country_scores[country]
+            max_country_name = country
+    
+    # Find the country with the highest total score
+    print("\nBest Country:")
+    print(f"{max_country_name} - Total score: {max_country_score:.1f}")
 
 if __name__ == "__main__":
     main()
