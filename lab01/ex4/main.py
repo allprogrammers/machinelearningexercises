@@ -1,62 +1,98 @@
-from typing import Dict, List, Tuple
-from collections import defaultdict
-from datetime import datetime
+import sys
+from typing import List, Dict, Tuple
 
-def read_file(filename: str) -> List[str]:
-    """Reads the file and returns a list of lines."""
-    with open(filename, 'r') as file:
-        return file.readlines()
+month = ["January", "February", "March", "April", "May", "June",
+         "July", "August", "September", "October", "November", "December"]
 
-def process_transactions(lines: List[str]) -> None:
-    """Processes the transactions and computes the required statistics."""
-    available_copies: Dict[str, int] = defaultdict(int)
-    sold_copies: Dict[str, int] = defaultdict(int)
-    sold_books_per_month: Dict[str, int] = defaultdict(int)
-    gains_per_book: Dict[str, Tuple[float, int]] = defaultdict(lambda: (0.0, 0))  # (total gain, total sold)
+class Book:
+    def __init__(self, isbn: str):
+        self.isbn = isbn
+        self.transactions = []
+        self.bought = 0
+        self.sold = 0
+        self.average_buy_price = 0.0
+        self.average_sell_price = 0.0
 
-    for line in lines:
-        # Parse the line
-        parts = line.strip().split()
-        if len(parts) != 5:
-            print(f"Invalid line format: {line}")
-            continue
+    def add_transaction(self, action: str, date: str, quantity: int, price: float) -> None:
+        """Adds a transaction for the book."""
+        if action == "S":
+            self.average_sell_price = (quantity*price + self.average_sell_price * self.sold) / (self.sold + quantity)
+            self.sold += quantity
+        elif action == "B":
+            self.average_buy_price = (quantity*price + self.average_buy_price * self.bought) / (self.bought + quantity)
+            self.bought += quantity
         
-        isbn, transaction_type, date, num_copies, price_per_copy = parts
-        num_copies = int(num_copies)
-        price_per_copy = float(price_per_copy)
-        date_obj = datetime.strptime(date, "%d/%m/%Y")
-        month_year = date_obj.strftime("%B, %Y")
+        if action == "S":
+            quantity = -quantity
+        self.transactions.append((date,quantity,price))
 
-        if transaction_type == "B":  # Books bought
-            available_copies[isbn] += num_copies
-        elif transaction_type == "S":  # Books sold
-            if available_copies[isbn] >= num_copies:
-                available_copies[isbn] -= num_copies
-                sold_copies[isbn] += num_copies
-                sold_books_per_month[month_year] += num_copies
-                total_gain, total_sold = gains_per_book[isbn]
-                gains_per_book[isbn] = (total_gain + num_copies * price_per_copy, total_sold + num_copies)
-            else:
-                print(f"Error: Not enough copies of {isbn} to sell {num_copies} copies.")
+    def calculate_gain(self) -> float:
+        """Calculates the gain from the transactions."""
+        gain = self.average_sell_price * self.sold - self.average_buy_price * self.sold
+        return gain
 
-    # Output results
-    print("Available copies:")
-    for isbn, count in available_copies.items():
-        print(f"{isbn}: {count}")
+def read_file(filename: str) -> Dict[str, Book]:
+    books: Dict[str, Book] = {}
+    with open(filename, 'r') as file:
+        for line in file:
+            # Strip any leading/trailing whitespace
+            line = line.strip()
+            if line:
+                # Split the line into components
+                parts = line.split()
+                
+                # Validate the format
+                if len(parts) != 5:
+                    print(f"Invalid format in line: {line}")
+                    continue
+                
+                isbn: str = parts[0]
+                if isbn not in books:
+                    books[isbn] = Book(isbn)
 
-    print("\nSold books per month:")
-    for month_year, count in sold_books_per_month.items():
-        print(f"{month_year}: {count}")
-
-    print("\nGain per book:")
-    for isbn, (total_gain, total_sold) in gains_per_book.items():
-        avg_gain = total_gain / total_sold if total_sold > 0 else 0
-        print(f"{isbn}: {total_gain:.1f} (avg {avg_gain:.1f}, sold {total_sold})")
+                books[isbn].add_transaction(parts[1], parts[2], int(parts[3]), float(parts[4]))
+    return books
 
 def main() -> None:
-    filename = "books.txt"
-    lines = read_file(filename)
-    process_transactions(lines)
+    # Check if the file name is provided as a command-line argument
+    if len(sys.argv) < 2:
+        print("Usage: python main.py <filename>")
+        sys.exit(1)
+
+    books = read_file(sys.argv[1])
+
+    # strings can be constructed in a single loop instead of running the loop n times
+    # for each book calculate the final inventory
+    print("Available copies:")
+    for key,value in books.items():
+        print(f"\t{key}: {value.bought - value.sold}")
+
+    print("")
+
+    # for each month-year calculate the number of books sold
+    monthly_sales: Dict[str, int] = {}
+    for book in books.values():
+        for transaction in book.transactions:
+            month_year = transaction[0][3:10]
+            if month_year not in monthly_sales:
+                monthly_sales[month_year] = 0
+            if transaction[1] < 0:
+                monthly_sales[month_year] += abs(transaction[1])
+
+    print("Sold books per month:")
+    for month_year, sold in monthly_sales.items():
+        if sold==0:
+            continue
+        print(f"\t{month[int(month_year[:2])-1]}, {month_year[3:]}: {sold}")
+    
+    print("")
+    # for each book calculate the gain
+    print("Gain per book:")
+    for key, value in books.items():
+        gain = value.calculate_gain()
+        print(f"\t{key}: {gain:.1f} (avg: {(gain)/value.sold:.1f}, sold: {value.sold})")
+    
+    
 
 if __name__ == "__main__":
     main()
