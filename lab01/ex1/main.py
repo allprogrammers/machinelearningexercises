@@ -1,5 +1,13 @@
 import sys
 
+class Player:
+    def __init__(self, name, surname, country_code, scores):
+        self.name = name
+        self.surname = surname
+        self.country_code = country_code
+        self.scores = scores
+        self.total_score = calculate_total_score(self.scores)
+
 def calculate_total_score(scores_list):
     """
     Calculate the average score by ignoring the max and min values
@@ -23,7 +31,7 @@ def calculate_total_score(scores_list):
     return sum
 
 def read_file(filename):
-    scores = []
+    players = []
     try:
         # Open the file and read its content
         with open(filename, 'r') as file:
@@ -51,12 +59,12 @@ def read_file(filename):
                         scores_list = [float(num) for num in parts[3:]]
                         
                         # Append the parsed data as a dictionary
-                        scores.append({
-                            "name": name,
-                            "surname": surname,
-                            "country_code": country_code,
-                            "scores": scores_list,
-                        })
+                        players.append(Player(
+                            name=name,
+                            surname=surname,
+                            country_code=country_code,
+                            scores=scores_list,
+                        ))
                     except ValueError as ve:
                         print(f"Error parsing line: {line} - {ve}")
                         continue
@@ -67,7 +75,7 @@ def read_file(filename):
         print(f"An error occurred: {e}")
         sys.exit(1)
 
-    return scores
+    return players
 
 def main():
 
@@ -79,12 +87,10 @@ def main():
     # Get the file name from the command-line arguments
     filename = sys.argv[1]
     players = read_file(filename)
-    for player in players:
-        player['total_score'] = calculate_total_score(player['scores'])
     
 
     # Sort players by total score in descending order
-    players.sort(key=lambda x: x['total_score'], reverse=True)
+    players.sort(key=lambda x: x.total_score, reverse=True)
 
 
     # Print the top three players
@@ -93,7 +99,7 @@ def main():
         if i < len(players):
             player = players[i]
             # Print the player's name, surname, and total score
-            print(f"{i + 1}: {player['name']} {player['surname']} - Score: {player['total_score']:.1f}")
+            print(f"{i + 1}: {player.name} {player.surname} - Score: {player.total_score:.1f}")
         else:
             break
         
@@ -102,8 +108,8 @@ def main():
     max_country_score = 0
     max_country_name = ""
     for player in players:
-        country = player["country_code"]
-        country_scores[country] = country_scores.get(country, 0) + player["total_score"]
+        country = player.country_code
+        country_scores[country] = country_scores.get(country, 0) + player.total_score
         if country_scores[country] > max_country_score:
             max_country_score = country_scores[country]
             max_country_name = country
